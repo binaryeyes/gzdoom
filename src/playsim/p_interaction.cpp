@@ -1471,6 +1471,9 @@ static int DamageMobj (AActor *target, AActor *inflictor, AActor *source, int da
 			target->Level->localEventManager->WorldThingDamaged(target, inflictor, source, realdamage, mod, flags, angle);
 			needevent = false;
 
+#ifdef ENABLE_SERIAL_OUT
+printf("Calling Die on target\n");
+#endif
 			target->CallDie (source, inflictor, flags, MeansOfDeath);
 			return realdamage;
 		}
@@ -1483,8 +1486,19 @@ static int DoDamageMobj(AActor *target, AActor *inflictor, AActor *source, int d
 	// [ZZ] event handlers need the result.
 	bool needevent = true;
 	int realdamage = DamageMobj(target, inflictor, source, damage, mod, flags, angle, needevent);
+#ifdef ENABLE_SERIAL_OUT
+printf("realdamage = %d\n", realdamage);
+#endif
 	if (realdamage >= 0) //Keep this check separated. Mods relying upon negative numbers may break otherwise.
+    {
+#ifdef ENABLE_SERIAL_OUT
+printf("before ReactToDamage\n");
+#endif
 		ReactToDamage(target, inflictor, source, realdamage, mod, flags, damage);
+#ifdef ENABLE_SERIAL_OUT
+printf("after ReactToDamage\n");
+#endif
+   }
 
 	if (realdamage > 0 && needevent)
 	{
@@ -1509,17 +1523,29 @@ DEFINE_ACTION_FUNCTION(AActor, DamageMobj)
 
 int P_DamageMobj(AActor *target, AActor *inflictor, AActor *source, int damage, FName mod, int flags, DAngle angle)
 {
+#ifdef ENABLE_SERIAL_OUT
+printf("called P_DamageMobj with damage=%d  target = %p inflictor=%p  source = %p\n", damage, target, inflictor, source);
+if(target != NULL && target->player != NULL) printf("hitting player\n");
+if(source != NULL && source->player != NULL) printf(" source is player\n");
+if(inflictor != NULL && inflictor->player != NULL) printf("inflictor is player\n");
+#endif
 	IFVIRTUALPTR(target, AActor, DamageMobj)
 	{
 		VMValue params[7] = { target, inflictor, source, damage, mod.GetIndex(), flags, angle.Degrees };
 		VMReturn ret;
 		int retval;
 		ret.IntAt(&retval);
+#ifdef ENABLE_SERIAL_OUT
+printf("call to VMCall\n");
+#endif
 		VMCall(func, params, 7, &ret, 1);
 		return retval;
 	}
 	else
 	{
+#ifdef ENABLE_SERIAL_OUT
+printf("call to DoDamageMobj\n");
+#endif
 		return DoDamageMobj(target, inflictor, source, damage, mod, flags, angle);
 	}
 }

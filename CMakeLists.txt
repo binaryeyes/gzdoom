@@ -200,6 +200,8 @@ if( ${ZDOOM_TARGET_ARCH} MATCHES "x86_64" )
 	option (HAVE_VULKAN "Enable Vulkan support" ON)
 endif()
 
+option (ENABLE_SERIAL_OUT "Build in support of serial output on Player hit" ON)
+
 # no, we're not using external asmjit for now, we made too many modifications to our's.
 # if the asmjit author uses our changes then we'll update this.
 
@@ -220,6 +222,10 @@ if( MSVC )
 	else()
 		set( ALL_C_FLAGS "/GF /Gy /permissive- /DHAVE_SOFTPOLY" )
 	endif()
+
+    if (ENABLE_SERIAL_OUT)
+        set (ALL_C_FLAGS "${ALL_C_FLAGS} /DENABLE_SERIAL_OUT" )
+    endif()
 
 	# Use SSE 2 as minimum always as the true color drawers needs it for __vectorcall
 	#set( ALL_C_FLAGS "${ALL_C_FLAGS} /arch:SSE2") # This is already the default
@@ -258,6 +264,10 @@ else()
 	else()
 		set( ALL_C_FLAGS "-ffp-contract=off -DHAVE_SOFTPOLY" )
 	endif()
+
+    if (ENABLE_SERIAL_OUT )
+        set (ALL_C_FLAGS "${ALL_C_FLAGS} -DENABLE_SERIAL_OUT" )
+    endif()
 
 	if ( UNIX )
 		include(CheckSymbolExists)
