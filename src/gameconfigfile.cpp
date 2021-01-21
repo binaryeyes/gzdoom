@@ -601,6 +601,13 @@ void FGameConfigFile::DoGlobalSetup ()
 			}
 		}
 	}
+#ifdef ENABLE_SERIAL_OUT
+    if (SetSection ("SerialSettings"))
+    {
+        ReadCVars(CVAR_CONFIG_ONLY);
+    } else {
+    }
+#endif
 }
 
 void FGameConfigFile::DoGameSetup (const char *gamename)

@@ -1164,6 +1164,10 @@ set (PCH_SOURCES
 	utility/nodebuilder/nodebuild_utility.cpp
 )
 
+if ( ${ENABLE_SERIAL_OUT})
+    set( PCH_SOURCES ${PCH_SOURCES} g_serial.cpp )
+endif()
+
 if( ${HAVE_VM_JIT} )
 	set( PCH_SOURCES ${PCH_SOURCES} ${VM_JIT_SOURCES} )
 else()
