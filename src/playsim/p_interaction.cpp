@@ -62,6 +62,10 @@
 #include "events.h"
 #include "actorinlines.h"
 
+#ifdef ENABLE_SERIAL_OUT
+#include "g_serial.h"
+#endif
+
 static FRandom pr_botrespawn ("BotRespawn");
 static FRandom pr_killmobj ("ActorDie");
 FRandom pr_damagemobj ("ActorTakeDamage");
@@ -1488,6 +1492,11 @@ static int DoDamageMobj(AActor *target, AActor *inflictor, AActor *source, int d
 	int realdamage = DamageMobj(target, inflictor, source, damage, mod, flags, angle, needevent);
 #ifdef ENABLE_SERIAL_OUT
 printf("realdamage = %d\n", realdamage);
+    if (target != NULL && target->player != NULL)
+    {
+        // looks, like we'just got hit
+        SerialBase::getInstance()->serviceDamage(realdamage);
+    }
 #endif
 	if (realdamage >= 0) //Keep this check separated. Mods relying upon negative numbers may break otherwise.
     {

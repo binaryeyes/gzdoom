@@ -118,6 +118,10 @@
 #include "hw_clock.h"
 #include "hwrenderer/scene/hw_drawinfo.h"
 
+#ifdef ENABLE_SERIAL_OUT
+#include "g_serial.h"
+#endif
+
 #ifdef __unix__
 #include "i_system.h"  // for SHARE_DIR
 #endif // __unix__
@@ -3316,6 +3320,14 @@ static int D_DoomMain_Internal (void)
 			// Update screen palette when restarting
 			screen->UpdatePalette();
 		}
+
+#ifdef ENABLE_SERIAL_OUT
+		if (!batchrun) Printf ("S_Serial: Setting up serial connection.\n");
+        if(restart && SerialBase::getInstance()->is_opened()) {
+            SerialBase::getInstance()->close();
+        }
+        SerialBase::getInstance()->open();
+#endif
 
 		// Base systems have been inited; enable cvar callbacks
 		FBaseCVar::EnableCallbacks ();
