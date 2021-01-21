@@ -63,7 +63,14 @@
 #include "hwrenderer/scene/hw_drawinfo.h"
 #include "doommenu.h"
 
+#ifdef __linux__
 #include <termios.h>
+#endif
+#ifdef _WIN32
+#include <windows.h>
+HANDLE hComm;
+DCB prev_tty, tty_sets;
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -81,7 +88,10 @@ SerialBase * sb;
 
 SerialBase* SerialBase::_singleton = NULL;
 
-SerialBase::SerialBase() : _opened(0), fd(-1)
+SerialBase::SerialBase() : _opened(0)
+#ifdef __linux__
+, fd(-1)
+#endif
 {
 };
 
@@ -103,6 +113,7 @@ SerialBase * SerialBase::getInstance()
     return _singleton;
 }
 
+#ifdef __linux__
 int SerialBase::open() {
     // TODO implement and override
 // linux specific
@@ -110,8 +121,10 @@ int SerialBase::open() {
 
     if (fd >=0)
         _opened = 1;
-    else 
+    else {
         _opened = 0;
+        return (fd >= 0);
+    }
 
     memset(&prev_tty, 0, sizeof(struct termios));
     memset(&tty_sets, 0, sizeof(struct termios));
@@ -172,6 +185,74 @@ int SerialBase::open() {
 
     return (fd >= 0);
 }
+#endif
+#ifdef _WIN32
+int SerialBase::open() {
+    char serialFullName[200];
+    sprintf(serialFullName, "\\\\.\\%s", serial_device.GetHumanString());
+    hComm = CreateFileA(serialFullName,                //port name
+        GENERIC_READ | GENERIC_WRITE, //Read/Write
+        0,                            // No Sharing
+        NULL,                         // No Security
+        OPEN_EXISTING,// Open existing port only
+        0,            // Non Overlapped I/O
+        NULL);        // Null for Comm Devices
+
+    if (hComm == INVALID_HANDLE_VALUE) {
+        Printf("Error in opening serial port");
+        return 0;
+    }
+    else {
+        Printf("opening serial port successful");
+        _opened = 1;
+    }
+    GetCommState(hComm, &prev_tty);
+    GetCommState(hComm, &tty_sets);
+    tty_sets.DCBlength = sizeof(DCB);
+    tty_sets.BaudRate = serial_speed;
+    tty_sets.fBinary = TRUE;
+    switch (serial_parity[0]) {
+        case 'n': default:
+            tty_sets.fParity = FALSE;
+            tty_sets.Parity = NOPARITY;
+            break;
+        case 'e':
+            tty_sets.fParity = TRUE;
+            tty_sets.Parity = EVENPARITY;
+            break;
+        case 'o':
+            tty_sets.fParity = TRUE;
+            tty_sets.Parity = ODDPARITY;
+            break;
+    }
+    switch (serial_stopbit) {
+        case 2:
+            tty_sets.StopBits = TWOSTOPBITS;
+            break;
+        case 15:
+            tty_sets.StopBits = ONE5STOPBITS;
+        case 1: default:
+            tty_sets.StopBits = ONESTOPBIT;
+            break;
+    }
+    tty_sets.ByteSize = serial_width;
+    tty_sets.fOutxCtsFlow = FALSE;
+    tty_sets.fOutxDsrFlow = FALSE;
+    tty_sets.fDtrControl = DTR_CONTROL_DISABLE;
+    tty_sets.fRtsControl = RTS_CONTROL_DISABLE;
+    tty_sets.fNull = FALSE;
+    tty_sets.fInX = FALSE;
+    tty_sets.fOutX = FALSE;
+    tty_sets.wReserved = 0;
+    if (!SetCommState(hComm, &tty_sets))
+    {
+        Printf("SerialSetup : Setting up serial connection attributes failed\n");
+        CloseHandle(hComm);//Closing the Serial Port
+        _opened = 0;
+    }
+    return 1;
+}
+#endif
 
 int SerialBase::close()
 {
@@ -179,6 +260,14 @@ int SerialBase::close()
         return 0;
 
     // TODO implement
+#ifdef __linux__
+    ::close(fd);
+
+#endif
+#ifdef _WIN32
+    CloseHandle(hComm);
+#endif
+    _opened = 0;
     return -1;
 }
 
@@ -189,11 +278,25 @@ int SerialBase::serviceDamage(int val)
         return -1;
 
     int rv = -1;
+#ifdef __linux__
     if ( val > 6) {
         rv = write(fd, serial_message1, 1);
     } else {
         rv = write(fd, serial_message2, 1);
     }
+#endif
+#ifdef _WIN32
+    DWORD written;
+    BOOL status;
+    if (val > 6)
+    {
+        status = WriteFile(hComm, serial_message1, 1, &written, NULL);
+    }
+    else {
+        status = WriteFile(hComm, serial_message2, 1, &written, NULL);
+    }
+    rv = status;
+#endif
     return rv;
 }
 

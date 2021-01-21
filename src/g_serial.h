@@ -1,13 +1,25 @@
 #ifndef G_SERIAL_H
 #define G_SERIAL_H
 // linux specific
+#ifdef __linux__
 #include <termios.h>
+#endif
+
+#ifdef _WIN32
+
+#endif
 
 class SerialBase {
     int _opened;
+#ifdef __linux__
     int fd;
-    SerialBase();
     struct termios prev_tty, tty_sets;
+#endif
+#ifdef _WIN32
+
+#endif
+
+    SerialBase();
 protected:
     static SerialBase * _singleton;
   public:
